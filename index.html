@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>体型管理</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1d2330;--sub:#475467;--line:#e3e6ec;--ac:#2f6fed;--ac2:#fff;--danger:#d92d20;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12151b;--card:#1b202a;--tx:#e8ebf2;--sub:#c4cbd8;--line:#2a313f;--ac:#6b98ff;--ac2:#10131a;--danger:#f97066}}
+:root[data-theme="dark"]{--bg:#12151b;--card:#1b202a;--tx:#e8ebf2;--sub:#c4cbd8;--line:#2a313f;--ac:#6b98ff;--ac2:#10131a;--danger:#f97066}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:20px/1.5 -apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:25px;margin:4px 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+h2{font-size:21px;margin:0 0 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:17px;color:var(--sub);margin-bottom:3px}
+input,select{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--tx)}
+.grid>*{min-width:0}
+input[type=date]{min-width:0;max-width:100%;min-height:46px;-webkit-appearance:none;appearance:none;text-align:left}
+.full{grid-column:1/-1}
+button{font:inherit;border:0;border-radius:10px;padding:12px 16px;background:var(--ac);color:var(--ac2);font-weight:600;cursor:pointer}
+button.ghost{background:transparent;color:var(--ac);border:1px solid var(--line)}
+button.del{background:transparent;color:var(--danger);padding:4px 8px;font-weight:400}
+button.ed{background:transparent;color:var(--ac);padding:4px 8px;font-weight:400}
+.j{display:block;font-size:15px;font-weight:600}
+.j.ok{color:#12a150}.j.high{color:var(--danger)}.j.low{color:#f08c00}.j.na{color:var(--sub);font-weight:400}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tabs button{flex:1;background:var(--card);color:var(--tx);border:1px solid var(--line);padding:12px 6px}
+.tabs button.on{background:var(--ac);color:var(--ac2);border-color:var(--ac)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.latest{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.stat{background:var(--bg);border-radius:10px;padding:8px 10px}
+.stat b{display:block;font-size:26px}
+.stat span{font-size:16px;color:var(--sub)}
+.d{font-size:20px;display:block;margin-top:2px}.stat .up{color:var(--danger);font-weight:600}.stat .down{color:#12a150;font-weight:600}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:22px;white-space:nowrap}
+th,td{padding:10px 9px;border-bottom:1px solid var(--line);text-align:right}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;z-index:1;background:var(--card);box-shadow:inset -1px 0 0 var(--line)}
+th{color:var(--sub);font-weight:500}
+svg{width:100%;height:auto;display:block}
+.muted{color:var(--sub);font-size:16px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal .h{text-align:center;font-size:16px;color:var(--sub)}
+.cal .c{min-height:84px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:3px 2px;font-size:22px;text-align:center;cursor:pointer}
+.cal .c i{display:block;font-style:normal;font-size:18px;color:var(--ac);min-height:22px}
+.cal .c.has{border-color:var(--ac)}
+.cal .c.today{outline:2px solid var(--ac);outline-offset:-1px}
+.cal .c.sel{background:var(--ac);color:var(--ac2)}
+.cal .c.sel i{color:var(--ac2)}
+textarea{width:100%;min-height:80px;font:15px monospace;padding:8px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--tx)}
+</style>
+</head>
+<body>
+<main>
+<h1>体型管理</h1>
+<p class="muted" id="syncState" style="margin:-8px 0 12px"></p>
+
+<div class="tabs"><button data-t="rec">記録</button><button data-t="chk">健康診断</button><button data-t="set">設定</button></div>
+<section id="tab-rec">
+<div class="card">
+<h2 id="formTitle">記録する</h2>
+<div class="grid">
+<div class="full"><label>日付</label><input type="date" id="date"></div>
+<div id="inputs" style="display:contents"></div>
+<div class="full row"><button id="save">保存</button><span class="muted" id="msg">同じ日付は上書きされます。空欄の項目は前回のまま残ります。</span></div>
+</div>
+</div>
+
+<div class="card"><h2>最新の記録</h2><div class="latest" id="latest"></div></div>
+
+<div class="card">
+<div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">グラフ</h2><div class="row"><select id="period" style="width:auto"></select><select id="metric" style="width:auto"></select></div></div>
+<div id="chart"></div>
+</div>
+
+<div class="card">
+<div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">履歴</h2><select id="view" style="width:auto"><option value="cal">カレンダー</option><option value="tbl">表</option></select></div>
+<div id="calWrap"><div class="row" style="justify-content:space-between;margin-bottom:6px"><button class="ghost" id="prevM">‹</button><b id="calTitle" style="cursor:pointer"></b><button class="ghost" id="nextM">›</button></div><div class="row" id="ymPick" style="display:none;margin-bottom:6px;justify-content:center"><select id="ySel" style="width:auto"></select><select id="mSel" style="width:auto"></select></div><div class="cal" id="cal"></div><div id="dayInfo"></div></div>
+<div id="tblWrap"><div class="row" style="margin-bottom:8px"><select id="tYear" style="width:auto"></select></div><div class="scroll"><table id="table"></table></div></div>
+</div>
+
+</section>
+
+<section id="tab-chk">
+<div class="card">
+<h2 id="chkTitle">健康診断の記録</h2>
+<div class="grid">
+<div class="full"><label>年（受診した年）</label><input type="number" inputmode="numeric" id="cYear" min="1900" max="2200"></div>
+<div><label>身長 (cm)</label><input type="number" step="0.1" inputmode="decimal" id="cH"></div>
+<div><label>体重 (kg)</label><input type="number" step="0.1" inputmode="decimal" id="cW"></div>
+<div class="full"><label>腹囲 (cm)</label><input type="number" step="0.1" inputmode="decimal" id="cA"></div>
+<div class="full row"><button id="cSave">保存</button><span class="muted" id="cMsg">同じ年は上書きされます。</span></div>
+</div>
+</div>
+<div class="card">
+<h2>年ごとの記録</h2>
+<div class="scroll"><table id="cTable"></table></div>
+<p class="muted" style="margin-bottom:0">判定は目安で、診断ではありません。BMIは、設定タブで生年月日を入れると年齢別の目標範囲（日本人の食事摂取基準2025年版）で、入れないと日本肥満学会の区分で表示します。腹囲は、性別を入れると男性85cm・女性90cmを基準に表示します。年齢は「その年−生まれた年」です。</p>
+</div>
+</section>
+
+<section id="tab-set">
+<div class="card">
+<h2>判定用のプロフィール</h2>
+<p class="muted" style="margin-top:0">健康診断タブのBMI・腹囲の目安判定に使います。入力は任意です。</p>
+<div class="grid"><div><label>生年月日</label><input type="date" id="pBirth"></div><div><label>性別</label><select id="pSex"><option value="">未設定</option><option value="m">男性</option><option value="f">女性</option></select></div></div>
+</div>
+<div class="card">
+<h2>項目の設定</h2>
+<p class="muted" style="margin-top:0">記録する項目を追加・削除できます。削除ボタンを2回押すと削除します。その項目の過去の数値も消えます。</p>
+<div id="fieldList" style="margin-bottom:10px"></div>
+<div class="row"><input id="newName" placeholder="項目名（例：二の腕）" style="flex:2;min-width:120px"><input id="newUnit" placeholder="単位" value="cm" style="flex:1;min-width:60px;max-width:80px"><button id="addField">追加</button></div>
+<p class="muted" id="fieldMsg"></p>
+</div>
+
+<div class="card">
+<h2>バックアップ</h2>
+<p class="muted" style="margin-top:0">データはこの端末に保存され、クラウドが使える場合はクラウドにも保存されます（一番上の表示で確認できます）。念のため、ときどきコピーして保管してください。</p>
+<div class="row" style="margin-bottom:8px"><button class="ghost" id="exp">データをコピー</button><button class="ghost" id="imp">下の内容を読み込む</button><button class="ghost" id="clr">書き出した内容を消す</button></div>
+<textarea id="box" placeholder="ここに貼り付けて「読み込む」"></textarea>
+</div>
+</section>
+</main>
+
+<script>
+let FIELDS=[["weight","体重","kg"],["waist","ウエスト","cm"],["navel","ヘソ周り","cm"],["below","へそ下","cm"],["hip","ヒップ","cm"],["thigh","太もも","cm"]];
+const KEY="bodyTracker.v1";
+let data=[];
+function load(){try{const r=localStorage.getItem(KEY);data=r?JSON.parse(r):[]}catch(e){data=[]}try{const f=localStorage.getItem(KEY+".fields");if(f){const a=JSON.parse(f);if(Array.isArray(a))FIELDS=a}}catch(e){}}
+function persist(){schedulePush();saveChecksLocal();try{localStorage.setItem(KEY,JSON.stringify(data));localStorage.setItem(KEY+".fields",JSON.stringify(FIELDS))}catch(e){document.getElementById("msg").textContent="保存できませんでした。バックアップ機能を使ってください。"}}
+const $=id=>document.getElementById(id);
+function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function sorted(){return data.slice().sort((a,b)=>a.date<b.date?-1:1)}
+function lastVal(k,beforeIdx){const s=sorted();for(let i=(beforeIdx===undefined?s.length:beforeIdx)-1;i>=0;i--){if(s[i][k]!=null)return s[i][k]}return null}
+
+function save(){
+  const date=$("date").value;if(!date){$("msg").textContent="日付を入れてください。";return}
+  if(!FIELDS.some(([k])=>!isNaN(parseFloat($(k).value)))){$("msg").textContent="数値を1つ以上入れてください。（記録ごと消す場合は「削除」を使ってください）";return}
+  let rec=data.find(r=>r.date===date);
+  const oldRec=editingDate&&editingDate!==date?data.find(r=>r.date===editingDate):null;
+  if(!rec){rec=oldRec?Object.assign({},oldRec,{date}):{date};data.push(rec)}
+  let n=0;
+  FIELDS.forEach(([k])=>{const v=parseFloat($(k).value);if(!isNaN(v)){rec[k]=v;n++}else if(editingDate){delete rec[k]}});
+  if(!n&&Object.keys(rec).length===1){data=data.filter(r=>r!==rec);$("msg").textContent="数値を1つ以上入れてください。";return}
+  if(oldRec)data=data.filter(r=>r!==oldRec);editingDate=null;rec.u=Date.now();persist();$("msg").textContent=date+" を保存しました。";
+  FIELDS.forEach(([k])=>$(k).value="");$("formTitle").textContent="記録する";render();
+}
+let editingDate=null,calY,calM,selDate=null;
+function initCal(){const d=new Date();calY=d.getFullYear();calM=d.getMonth();selDate=today()}
+function applyView(){const c=$("view").value==="cal";$("calWrap").style.display=c?"":"none";$("tblWrap").style.display=c?"none":""}
+function monthsOf(y){
+  const s=new Set(data.filter(r=>+r.date.slice(0,4)===y).map(r=>+r.date.slice(5,7)-1));
+  return [...s].sort((a,b)=>a-b);
+}
+function renderCal(){
+  const k=$("metric").value,pad=n=>String(n).padStart(2,"0");
+  $("calTitle").textContent=calY+"年"+(calM+1)+"月 ▾";
+  const ys=[...new Set([...data.map(r=>+r.date.slice(0,4)),calY])].sort((a,b)=>b-a);
+  $("ySel").innerHTML=ys.map(y=>`<option value="${y}">${y}年</option>`).join("");$("ySel").value=calY;
+  const ms=[...new Set([...monthsOf(calY),calM])].sort((a,b)=>a-b);
+  $("mSel").innerHTML=ms.map(m=>`<option value="${m}">${m+1}月</option>`).join("");$("mSel").value=calM;
+  const first=new Date(calY,calM,1).getDay(),dim=new Date(calY,calM+1,0).getDate(),td=today();
+  let h=["日","月","火","水","木","金","土"].map(w=>`<div class="h">${w}</div>`).join("");
+  for(let i=0;i<first;i++)h+="<div></div>";
+  for(let d=1;d<=dim;d++){
+    const ds=calY+"-"+pad(calM+1)+"-"+pad(d),r=data.find(x=>x.date===ds);
+    const v=r&&r[k]!=null?r[k].toFixed(1):"";
+    h+=`<div class="c${r?" has":""}${ds===selDate?" sel":""}${ds===td?" today":""}" data-d="${ds}">${d}<i>${v}</i></div>`;
+  }
+  $("cal").innerHTML=h;
+  $("cal").querySelectorAll(".c").forEach(c=>c.onclick=()=>{selDate=c.dataset.d;renderCal()});
+  renderDay();
+}
+function renderDay(){
+  const el=$("dayInfo");
+  if(!selDate){el.innerHTML='<p class="muted">日付をタップすると詳細が見られます。</p>';return}
+  const r=data.find(x=>x.date===selDate);
+  if(!r){
+    el.innerHTML=`<p class="muted">${selDate} は記録がありません。</p><button class="ghost" id="addDay">この日に記録する</button>`;
+    $("addDay").onclick=()=>{editingDate=null;$("date").value=selDate;$("formTitle").textContent=selDate+" を入力中";window.scrollTo({top:0,behavior:"smooth"})};
+    return;
+  }
+  el.innerHTML=`<div style="margin-top:10px"><b>${selDate}</b><div class="latest" style="margin:8px 0">${FIELDS.map(([k,n,u])=>`<div class="stat"><span>${n}</span><b>${r[k]==null?"–":r[k].toFixed(1)+" "+u}</b></div>`).join("")}</div><div class="row"><button class="ghost" id="dEdit">編集</button><button class="del" id="dDel">削除</button></div></div>`;
+  $("dEdit").onclick=()=>edit(selDate);
+  $("dDel").onclick=()=>twoTap($("dDel"),()=>del(selDate));
+}
+let cloud=null,uid=null,lastSync={},pushQ=Promise.resolve(),pushTimer=null;
+function ls(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function setSync(t){const e=$("syncState");if(e)e.textContent=t}
+function cleanFields(a){return a.filter(f=>Array.isArray(f)&&/^[a-z0-9]+$/i.test(f[0])).map(f=>[f[0],clean(f[1]),clean(f[2])||"cm"]).filter(f=>f[1])}
+function cleanRecs(a){
+  return a.filter(r=>r&&typeof r.date==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(r.date)).map(r=>{
+    const o={date:r.date};if(typeof r.u==="number")o.u=r.u;
+    Object.keys(r).forEach(k=>{if(k!=="date"&&k!=="u"&&typeof r[k]==="number"&&isFinite(r[k]))o[k]=r[k]});
+    return o;
+  });
+}
+function parts(){
+  const o={settings:{fields:FIELDS.map(([k,n,u])=>({k,n,u}))},checks:{items:checks},profile:{birth:profile.birth,sex:profile.sex}};
+  data.forEach(r=>{const y="y"+r.date.slice(0,4);(o[y]=o[y]||{records:[]}).records.push(r)});
+  return o;
+}
+function schedulePush(){
+  if(!cloud)return;
+  try{localStorage.setItem(KEY+".dirty","1")}catch(e){}
+  setSync("クラウドに保存中…");
+  clearTimeout(pushTimer);
+  pushTimer=setTimeout(()=>{pushQ=pushQ.then(push)},700);
+}
+async function push(){
+  if(!cloud)return;
+  const col=cloud.collection("data/users/"+uid),p=parts();
+  try{
+    for(const k of Object.keys(p)){const s=JSON.stringify(p[k]);if(lastSync[k]!==s){await col.doc(k).set(p[k]);lastSync[k]=s}}
+    for(const k of Object.keys(lastSync)){if(!(k in p)){await col.doc(k).delete();delete lastSync[k]}}
+    try{localStorage.removeItem(KEY+".dirty");localStorage.setItem(KEY+".synced","1")}catch(e){}
+    setSync("クラウドに保存済み");
+  }catch(e){setSync("クラウドに保存できませんでした（この端末には保存済み）")}
+}
+async function initCloud(){
+  if(!window.claude||!claude.use){setSync("この端末のみに保存されています");return}
+  try{
+    const user=await claude.use("user"),db=await claude.use("db");
+    const id=user?await user.id():null;
+    if(!db||!id){setSync("この端末のみに保存されています（クラウドは使えません）");return}
+    uid=id;setSync("クラウドと同期中…");
+    const snap=await db.collection("data/users/"+uid).get();
+    const cd={};snap.docs.forEach(d=>{cd[d.id]=d.data()});
+    let cRecs=[];
+    Object.keys(cd).forEach(k=>{if(/^y\d{4}$/.test(k)&&cd[k]&&Array.isArray(cd[k].records))cRecs=cRecs.concat(cleanRecs(cd[k].records))});
+    const sf=cd.settings&&Array.isArray(cd.settings.fields)?cd.settings.fields:null;
+    const cF=sf?cleanFields(sf.filter(f=>f&&typeof f==="object").map(f=>[f.k,f.n,f.u])):[];
+    const cC=cd.checks&&Array.isArray(cd.checks.items)?cleanChecks(cd.checks.items):[];
+    if(cd.profile){profile=cleanProfile(cd.profile);applyProfileUI()}
+    const hasCloud=cRecs.length>0||cF.length>0||cC.length>0;
+    if(hasCloud){
+      if(!ls(KEY+".synced")||ls(KEY+".dirty")){
+        const m={};data.forEach(r=>{m[r.date]=r});
+        cRecs.forEach(r=>{const o=m[r.date];if(!o||(r.u||0)>=(o.u||0))m[r.date]=r});
+        data=Object.values(m);
+        {const cm={};checks.forEach(r=>{cm[r.year]=r});cC.forEach(r=>{const o=cm[r.year];if(!o||(r.u||0)>=(o.u||0))cm[r.year]=r});checks=Object.values(cm)}
+        if(cF.length){const ks=new Set(cF.map(f=>f[0]));FIELDS=cF.concat(FIELDS.filter(f=>!ks.has(f[0])))}
+      }else{
+        data=cRecs;if(cF.length)FIELDS=cF;if(cd.checks)checks=cC;
+      }
+      try{localStorage.setItem(KEY,JSON.stringify(data));localStorage.setItem(KEY+".fields",JSON.stringify(FIELDS))}catch(e){}
+      saveChecksLocal();
+      Object.keys(cd).forEach(k=>{lastSync[k]=JSON.stringify(cd[k])});
+      buildForm();renderFields();fillMetric();render();renderChecks();
+    }
+    cloud=db;
+    pushQ=pushQ.then(push);
+  }catch(e){setSync("この端末のみに保存されています（クラウドと同期できませんでした）")}
+}
+let checks=[],editingYear=null,profile={birth:"",sex:""};
+function cleanChecks(a){
+  return (Array.isArray(a)?a:[]).filter(r=>r&&Number.isInteger(r.year)&&r.year>=1900&&r.year<=2200).map(r=>{
+    const o={year:r.year};if(typeof r.u==="number")o.u=r.u;
+    ["h","w","a"].forEach(k=>{if(typeof r[k]==="number"&&isFinite(r[k]))o[k]=r[k]});
+    return o;
+  });
+}
+function loadChecks(){try{const r=localStorage.getItem(KEY+".checks");checks=r?cleanChecks(JSON.parse(r)):[]}catch(e){checks=[]}}
+function saveChecksLocal(){try{localStorage.setItem(KEY+".checks",JSON.stringify(checks));localStorage.setItem(KEY+".profile",JSON.stringify(profile))}catch(e){}}
+function showTab(t){
+  if(!["rec","chk","set"].includes(t))t="rec";
+  ["rec","chk","set"].forEach(x=>{$("tab-"+x).style.display=x===t?"":"none"});
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));
+  try{localStorage.setItem(KEY+".tab",t)}catch(e){}
+  window.scrollTo({top:0});
+}
+function clearCheckForm(){
+  ["cH","cW","cA"].forEach(id=>{$(id).value=""});
+  $("cYear").value=new Date().getFullYear();
+  $("chkTitle").textContent="健康診断の記録";editingYear=null;
+}
+function cleanProfile(o){o=o||{};return{birth:/^\d{4}-\d{2}-\d{2}$/.test(o.birth||"")?o.birth:"",sex:(o.sex==="m"||o.sex==="f")?o.sex:""}}
+function applyProfileUI(){$("pBirth").value=profile.birth;$("pSex").value=profile.sex}
+function loadProfile(){try{const r=localStorage.getItem(KEY+".profile");if(r)profile=cleanProfile(JSON.parse(r))}catch(e){}applyProfileUI()}
+function profileChanged(){profile=cleanProfile({birth:$("pBirth").value,sex:$("pSex").value});persist();renderChecks()}
+function ageAt(y){const m=/^(\d{4})-/.exec(profile.birth);return m?y-(+m[1]):null}
+function bmiJudge(b,age){
+  if(b==null)return null;
+  const v=Math.round(b*10)/10;
+  if(age!=null&&age<18)return["18歳未満は対象外","na"];
+  if(age==null){
+    if(v<18.5)return["低体重","low"];
+    if(v<25)return["普通体重","ok"];
+    return[v<30?"肥満1度":v<35?"肥満2度":v<40?"肥満3度":"肥満4度","high"];
+  }
+  const lo=age>=65?21.5:age>=50?20:18.5;
+  if(v<lo)return["目標より低め","low"];
+  if(v<=24.9)return["目標範囲内","ok"];
+  return["目標より高め","high"];
+}
+function waistJudge(a){
+  if(a==null||!profile.sex)return null;
+  return a>=(profile.sex==="m"?85:90)?["基準以上","high"]:["基準未満","ok"];
+}
+function renderChecks(){
+  const el=$("cTable"),s=checks.slice().sort((a,b)=>b.year-a.year);
+  if(!s.length){el.innerHTML='<tr><td class="muted">まだ記録がありません</td></tr>';return}
+  const f=v=>v==null?"":v.toFixed(1);
+  const cell=(n,j)=>n+(j?`<span class="j ${j[1]}">${j[0]}</span>`:"");
+  let h="<tr><th>年</th><th>身長(cm)</th><th>体重(kg)</th><th>腹囲(cm)</th><th>BMI</th><th></th></tr>";
+  s.forEach(r=>{
+    const b=r.h&&r.w?r.w/((r.h/100)*(r.h/100)):null,age=ageAt(r.year);
+    h+=`<tr><td>${cell(r.year+"年",age==null?null:[age+"歳","na"])}</td><td>${f(r.h)}</td><td>${f(r.w)}</td><td>${cell(f(r.a),waistJudge(r.a))}</td><td>${cell(b==null?"":b.toFixed(1),bmiJudge(b,age))}</td><td><button class="ed" data-y="${r.year}">編集</button><button class="del" data-y="${r.year}">削除</button></td></tr>`;
+  });
+  el.innerHTML=h;
+  el.querySelectorAll(".ed").forEach(b=>b.onclick=()=>editCheck(+b.dataset.y));
+  el.querySelectorAll(".del").forEach(b=>b.onclick=()=>twoTap(b,()=>delCheck(+b.dataset.y)));
+}
+function saveCheck(){
+  const y=parseInt($("cYear").value,10);
+  if(!(y>=1900&&y<=2200)){$("cMsg").textContent="年を入れてください。";return}
+  const v={h:parseFloat($("cH").value),w:parseFloat($("cW").value),a:parseFloat($("cA").value)};
+  if(!Object.values(v).some(x=>!isNaN(x))){$("cMsg").textContent="身長・体重・腹囲のどれか1つは入れてください。";return}
+  const old=editingYear!=null&&editingYear!==y?checks.find(r=>r.year===editingYear):null;
+  let rec=checks.find(r=>r.year===y);
+  if(!rec){rec=old?Object.assign({},old,{year:y}):{year:y};checks.push(rec)}
+  ["h","w","a"].forEach(k=>{if(!isNaN(v[k]))rec[k]=v[k];else if(editingYear!=null)delete rec[k]});
+  if(old)checks=checks.filter(r=>r!==old);
+  rec.u=Date.now();persist();
+  clearCheckForm();$("cMsg").textContent=y+"年を保存しました。";renderChecks();
+}
+function editCheck(y){
+  const r=checks.find(x=>x.year===y);if(!r)return;
+  editingYear=y;$("cYear").value=y;
+  $("cH").value=r.h==null?"":r.h;$("cW").value=r.w==null?"":r.w;$("cA").value=r.a==null?"":r.a;
+  $("chkTitle").textContent=y+"年を編集中";
+  $("cMsg").textContent="数値を直して「保存」を押してください。空欄にした項目は記録なしになります。";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function delCheck(y){checks=checks.filter(r=>r.year!==y);persist();renderChecks()}
+function twoTap(btn,fn){
+  if(btn.dataset.arm){fn();return}
+  btn.dataset.arm="1";const t=btn.textContent;btn.textContent="本当に削除";btn.style.fontWeight="700";
+  setTimeout(()=>{if(btn.isConnected){delete btn.dataset.arm;btn.textContent=t;btn.style.fontWeight=""}},4000);
+}
+function clean(s){return String(s||"").replace(/[<>&"'`]/g,"").trim().slice(0,12)}
+function buildForm(){
+  const old={};FIELDS.forEach(([k])=>{const e=$(k);if(e)old[k]=e.value});
+  $("inputs").innerHTML=FIELDS.map(([k,n,u])=>`<div><label>${n} (${u})</label><input type="number" step="0.1" inputmode="decimal" id="${k}"></div>`).join("");
+  FIELDS.forEach(([k])=>{if(old[k])$(k).value=old[k]});
+}
+function fillMetric(){
+  const m=$("metric"),cur=m.value;
+  m.innerHTML=FIELDS.map(([k,n])=>`<option value="${k}">${n}</option>`).join("");
+  if(FIELDS.some(f=>f[0]===cur))m.value=cur;
+}
+function renderFields(){
+  const el=$("fieldList");
+  el.innerHTML=FIELDS.map(([k,n,u])=>`<div class="row" style="justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line)"><span>${n} <span class="muted">(${u})</span></span><button class="del" data-k="${k}">削除</button></div>`).join("")||'<p class="muted">項目がありません</p>';
+  el.querySelectorAll(".del").forEach(b=>b.onclick=()=>twoTap(b,()=>delField(b.dataset.k)));
+}
+function fieldsChanged(){persist();buildForm();renderFields();fillMetric();render()}
+function addField(){
+  const n=clean($("newName").value),u=clean($("newUnit").value)||"cm";
+  if(!n){$("fieldMsg").textContent="項目名を入れてください。";return}
+  if(FIELDS.some(f=>f[1]===n)){$("fieldMsg").textContent="同じ名前の項目があります。";return}
+  FIELDS.push(["f"+Date.now().toString(36),n,u]);
+  $("newName").value="";$("fieldMsg").textContent=n+" を追加しました。";fieldsChanged();
+}
+function delField(k){
+  const f=FIELDS.find(x=>x[0]===k);
+  if(!f)return;
+  FIELDS=FIELDS.filter(x=>x[0]!==k);
+  data.forEach(r=>{delete r[k]});data=data.filter(r=>Object.keys(r).some(x=>x!=="date"&&x!=="u"));
+  $("fieldMsg").textContent=f[1]+" を削除しました。";fieldsChanged();
+}
+function edit(date){
+  const r=data.find(x=>x.date===date);if(!r)return;
+  editingDate=date;$("date").value=date;
+  FIELDS.forEach(([k])=>{$(k).value=r[k]==null?"":r[k]});
+  $("formTitle").textContent=date+" を編集中";
+  $("msg").textContent="数値を直して「保存」を押してください。空欄にした項目は記録なしになります。";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function del(date){data=data.filter(r=>r.date!==date);persist();render()}
+
+function renderLatest(){
+  const el=$("latest");el.innerHTML="";
+  FIELDS.forEach(([k,name,u])=>{
+    const s=sorted().filter(r=>r[k]!=null);
+    const cur=s.length?s[s.length-1][k]:null;
+    let delta="";
+    if(s.length>1){
+      const fmt=x=>Math.abs(x)<0.05?"±0":(x>0?"▲":"▼")+Math.abs(x).toFixed(1);
+      const cls=x=>Math.abs(x)<0.05?"":(x>0?"up":"down");
+      const p=s[s.length-2],d1=cur-p[k];
+      delta+=`<span class="d ${cls(d1)}">前回(${p.date.slice(5).replace("-","/")}) ${fmt(d1)}</span>`;
+      const t=new Date(s[s.length-1].date).getTime()-365*864e5;let best=null,bd=1e18;
+      s.slice(0,-1).forEach(r=>{const g=Math.abs(new Date(r.date).getTime()-t);if(g<bd){bd=g;best=r}});
+      if(best&&bd<=45*864e5){const d2=cur-best[k];delta+=`<span class="d ${cls(d2)}">1年前(${best.date.slice(2).replace(/-/g,"/")}) ${fmt(d2)}</span>`}
+      else delta+='<span class="d">1年前 記録なし</span>';
+    }else{delta='<span class="d">前回 記録なし</span><span class="d">1年前 記録なし</span>'}
+    el.insertAdjacentHTML("beforeend",`<div class="stat"><span>${name}</span><b>${cur==null?"—":cur.toFixed(1)}<small style="font-size:11px;font-weight:400"> ${cur==null?"":u}</small></b>${delta}</div>`);
+  });
+}
+function renderTable(){
+  const ys=[...new Set(data.map(r=>r.date.slice(0,4)))].sort().reverse();
+  const ts=$("tYear");let cy=ts.value;if(!ys.includes(cy))cy=ys[0]||"";
+  ts.innerHTML=ys.map(y=>`<option value="${y}">${y}年</option>`).join("");ts.value=cy;
+  const s=sorted().reverse().filter(r=>r.date.startsWith(cy));
+  if(!s.length){$("table").innerHTML='<tr><td class="muted">まだ記録がありません</td></tr>';return}
+  let h="<tr><th>日付</th>"+FIELDS.map(f=>`<th>${f[1]}</th>`).join("")+"<th></th></tr>";
+  s.forEach(r=>{h+=`<tr><td>${r.date.slice(5).replace("-","/")}</td>`+FIELDS.map(([k])=>`<td>${r[k]==null?"–":r[k].toFixed(1)}</td>`).join("")+`<td><button class="ed" data-e="${r.date}">編集</button><button class="del" data-d="${r.date}">削除</button></td></tr>`});
+  $("table").innerHTML=h;
+  $("table").querySelectorAll(".del").forEach(b=>b.onclick=()=>twoTap(b,()=>del(b.dataset.d)));
+  $("table").querySelectorAll(".ed").forEach(b=>b.onclick=()=>edit(b.dataset.e));
+}
+function renderChart(){
+  const k=$("metric").value;const f=FIELDS.find(x=>x[0]===k);
+  if(!f){$("chart").innerHTML='<p class="muted">項目がありません。</p>';return}
+  const per=$("period").value||"all";
+  const pts=sorted().filter(r=>r[k]!=null&&(per==="all"||r.date.startsWith(per)));
+  const box=$("chart");
+  if(pts.length<2){box.innerHTML='<p class="muted">2回以上記録するとグラフが表示されます。</p>';return}
+  const W=600,H=340,L=68,R=16,T=36,B=64;
+  const vals=pts.map(p=>p[k]);let mn=Math.min(...vals),mx=Math.max(...vals);
+  let step=0.5;for(const s of [0.5,1,2,5,10,20,50]){step=s;if((mx-mn)/s<=8)break}
+  mn=Math.floor(mn/step)*step;mx=Math.ceil(mx/step)*step;if(mx-mn<step*2){mn-=step;mx+=step}
+  const t0=new Date(pts[0].date).getTime(),t1=new Date(pts[pts.length-1].date).getTime()||t0+1;
+  const X=d=>L+(t1===t0?0:(new Date(d).getTime()-t0)/(t1-t0))*(W-L-R);
+  const Y=v=>T+(1-(v-mn)/(mx-mn))*(H-T-B);
+  let g="";
+  let mdt=new Date(new Date(t0).getFullYear(),new Date(t0).getMonth(),1);
+  if(mdt.getTime()<t0)mdt=new Date(mdt.getFullYear(),mdt.getMonth()+1,1);
+  const ms=[];while(mdt.getTime()<=t1){ms.push(mdt);mdt=new Date(mdt.getFullYear(),mdt.getMonth()+1,1)}
+  const lstep=ms.length<=12?1:ms.length<=24?2:ms.length<=48?3:6;
+  ms.forEach((m,i)=>{
+    const show=i%lstep===0;
+    if(ms.length>24&&!show)return;
+    const x=X(m).toFixed(1),jan=m.getMonth()===0;
+    g+=`<line x1="${x}" x2="${x}" y1="${T}" y2="${H-B}" stroke="${jan?"var(--sub)":"var(--line)"}" stroke-width="${jan?1.5:1}"${jan?"":' stroke-dasharray="4 4"'}/>`;
+    if(show)g+=`<text x="${x}" y="${H-B+30}" text-anchor="middle" font-size="22" fill="var(--sub)">${m.getMonth()+1}月</text>`;
+  });
+  const nT=Math.round((mx-mn)/step);
+  for(let i=0;i<=nT;i++){const v=mn+i*step,y=Y(v);g+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${L-8}" y="${y+7}" text-anchor="end" font-size="22" fill="var(--sub)">${v.toFixed(1)}</text>`}
+  const path=pts.map((p,i)=>(i?"L":"M")+X(p.date).toFixed(1)+" "+Y(p[k]).toFixed(1)).join(" ");
+  const avg=vals.reduce((a,b)=>a+b,0)/vals.length;
+  const avgLine=`<line x1="${L}" x2="${W-R}" y1="${Y(avg).toFixed(1)}" y2="${Y(avg).toFixed(1)}" stroke="#f08c00" stroke-width="2" stroke-dasharray="6 4"/><text x="${W-R}" y="${(Y(avg)-7).toFixed(1)}" text-anchor="end" font-size="22" fill="#f08c00">平均 ${avg.toFixed(1)}</text>`;
+  const summary=`<p class="muted" style="margin:0 0 6px">平均 <b style="color:var(--tx)">${avg.toFixed(1)} ${f[2]}</b>（${pts.length}件）　最小 ${Math.min(...vals).toFixed(1)}　最大 ${Math.max(...vals).toFixed(1)}</p>`;
+  const dots=pts.map(p=>`<circle cx="${X(p.date).toFixed(1)}" cy="${Y(p[k]).toFixed(1)}" r="5" fill="var(--ac)"/>`).join("");
+  const lab=(p)=>per==="all"?p.date.slice(2).replace(/-/g,"/"):p.date.slice(5).replace("-","/");
+  g+=`<text x="${L}" y="${H-6}" font-size="20" fill="var(--sub)">${lab(pts[0])}</text><text x="${W-R}" y="${H-6}" text-anchor="end" font-size="20" fill="var(--sub)">${lab(pts[pts.length-1])}</text>`;
+  box.innerHTML=summary+`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${f[1]}の推移"><text x="${L}" y="24" font-size="22" fill="var(--sub)">${f[1]} (${f[2]})</text>${g}${avgLine}<path d="${path}" fill="none" stroke="var(--ac)" stroke-width="3.5" stroke-linejoin="round"/>${dots}</svg>`;
+}
+function fillPeriod(){
+  const sel=$("period"),cur=sel.value||"all";
+  const ys=[...new Set(data.map(r=>r.date.slice(0,4)))].sort().reverse();
+  sel.innerHTML='<option value="all">全期間</option>'+ys.map(y=>`<option value="${y}">${y}年</option>`).join("");
+  sel.value=(cur==="all"||ys.includes(cur))?cur:"all";
+}
+function render(){fillPeriod();renderLatest();renderChart();renderTable();renderCal()}
+
+$("save").onclick=save;
+$("addField").onclick=addField;
+$("view").onchange=applyView;
+$("tYear").onchange=renderTable;
+$("calTitle").onclick=()=>{const p=$("ymPick");p.style.display=p.style.display==="none"?"flex":"none"};
+$("ySel").onchange=()=>{const y=+$("ySel").value,a=monthsOf(y);calY=y;if(a.length&&!a.includes(calM))calM=a[a.length-1];renderCal()};
+$("mSel").onchange=()=>{calM=+$("mSel").value;renderCal()};
+$("prevM").onclick=()=>{calM--;if(calM<0){calM=11;calY--}renderCal()};
+$("nextM").onclick=()=>{calM++;if(calM>11){calM=0;calY++}renderCal()};
+
+$("metric").onchange=()=>{renderChart();renderCal()};
+$("period").onchange=()=>{
+  const y=$("period").value;renderChart();
+  if(y!=="all"){
+    $("tYear").value=y;$("view").value="tbl";applyView();renderTable();
+    const a=monthsOf(+y);calY=+y;if(a.length&&!a.includes(calM))calM=a[a.length-1];renderCal();
+  }
+};
+$("exp").onclick=async()=>{const t=JSON.stringify({fields:FIELDS,data,checks,profile});$("box").value=t;try{await navigator.clipboard.writeText(t);$("msg").textContent="コピーしました。"}catch(e){$("box").select();$("msg").textContent="下の欄から手動でコピーしてください。"}};
+$("imp").onclick=()=>{try{const o=JSON.parse($("box").value);const a=Array.isArray(o)?o:o.data;if(!Array.isArray(a))throw 0;
+  if(!Array.isArray(o)&&Array.isArray(o.fields)){const fs=o.fields.filter(f=>Array.isArray(f)&&/^[a-z0-9]+$/i.test(f[0])).map(f=>[f[0],clean(f[1]),clean(f[2])||"cm"]).filter(f=>f[1]);if(fs.length)FIELDS=fs}
+  if(!Array.isArray(o)&&Array.isArray(o.checks))checks=cleanChecks(o.checks);
+  if(!Array.isArray(o)&&o.profile){profile=cleanProfile(o.profile);applyProfileUI()}
+  data=a.filter(r=>r&&r.date);fieldsChanged();renderChecks();$("msg").textContent="読み込みました。"}catch(e){$("msg").textContent="読み込めませんでした。形式を確認してください。"}};
+$("clr").onclick=()=>{$("box").value=""};
+$("date").value=today();
+load();loadChecks();loadProfile();initCal();applyView();buildForm();renderFields();fillMetric();render();
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>showTab(b.dataset.t));
+$("cSave").onclick=saveCheck;
+$("pBirth").onchange=profileChanged;$("pSex").onchange=profileChanged;
+clearCheckForm();renderChecks();showTab(ls(KEY+".tab")||"rec");
+initCloud();
+</script>
+</body>
+</html>
