@@ -96,7 +96,7 @@ textarea{width:100%;min-height:80px;font:15px monospace;padding:8px;border:1px s
 <div class="card">
 <h2 id="chkTitle">健康診断の記録</h2>
 <div class="grid grid3">
-<div class="full row" style="flex-wrap:nowrap;align-items:flex-end"><div><label style="min-height:0">年（受診した年）</label><input type="number" inputmode="numeric" id="cYear" min="1900" max="2200" style="width:150px"></div><button id="cSave">保存</button></div>
+<div class="full row" style="flex-wrap:nowrap;align-items:flex-end"><div><label style="min-height:0">年（受診した年）</label><select id="cYear" style="width:150px"></select></div><button id="cSave">保存</button></div>
 <div><label>身長 (cm)</label><input type="number" step="0.1" inputmode="decimal" id="cH"></div>
 <div><label>体重 (kg)</label><input type="number" step="0.1" inputmode="decimal" id="cW"></div>
 <div><label>腹囲 (cm)</label><input type="number" step="0.1" inputmode="decimal" id="cA"></div>
@@ -285,9 +285,11 @@ function showTab(t){
   try{localStorage.setItem(KEY+".tab",t)}catch(e){}
   window.scrollTo({top:0});
 }
+function fillCYear(){const ny=new Date().getFullYear();let o="";for(let y=ny+1;y>=ny-60;y--)o+=`<option value="${y}">${y}年</option>`;$("cYear").innerHTML=o}
+function setCYear(y){const e=$("cYear");if(![...e.options].some(o=>+o.value===y))e.insertAdjacentHTML("beforeend",`<option value="${y}">${y}年</option>`);e.value=y}
 function clearCheckForm(){
   ["cH","cW","cA"].forEach(id=>{$(id).value=""});
-  $("cYear").value=new Date().getFullYear();
+  setCYear(new Date().getFullYear());
   $("chkTitle").textContent="健康診断の記録";editingYear=null;
 }
 function cleanProfile(o){o=o||{};return{birth:/^\d{4}-\d{2}-\d{2}$/.test(o.birth||"")?o.birth:"",sex:(o.sex==="m"||o.sex==="f")?o.sex:""}}
@@ -374,7 +376,7 @@ function saveCheck(){
 }
 function editCheck(y){
   const r=checks.find(x=>x.year===y);if(!r)return;
-  editingYear=y;$("cYear").value=y;
+  editingYear=y;setCYear(y);
   $("cH").value=r.h==null?"":r.h;$("cW").value=r.w==null?"":r.w;$("cA").value=r.a==null?"":r.a;
   $("chkTitle").textContent=y+"年を編集中";
   $("cMsg").textContent="数値を直して「保存」を押してください。空欄にした項目は記録なしになります。";
@@ -533,7 +535,7 @@ load();loadChecks();loadProfile();initCal();applyView();buildForm();renderFields
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>showTab(b.dataset.t));
 $("cSave").onclick=saveCheck;
 $("pBirth").onchange=profileChanged;$("pSex").onchange=profileChanged;
-clearCheckForm();renderChecks();showTab(ls(KEY+".tab")||"rec");
+fillCYear();clearCheckForm();renderChecks();showTab(ls(KEY+".tab")||"rec");
 initCloud();
 </script>
 </body>
