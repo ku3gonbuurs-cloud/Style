@@ -19,12 +19,17 @@ h2{font-size:21px;margin:0 0 10px}
 label{display:block;font-size:17px;color:var(--sub);margin-bottom:3px}
 input,select{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--tx)}
 .grid>*{min-width:0}
+.grid3{grid-template-columns:repeat(3,1fr);gap:8px}
+.grid3 label{font-size:15px;line-height:1.25;min-height:38px}
+.grid3 input{padding:10px 8px}
 input[type=date]{min-width:0;max-width:100%;min-height:46px;-webkit-appearance:none;appearance:none;text-align:left}
 .full{grid-column:1/-1}
 button{font:inherit;border:0;border-radius:10px;padding:12px 16px;background:var(--ac);color:var(--ac2);font-weight:600;cursor:pointer}
 button.ghost{background:transparent;color:var(--ac);border:1px solid var(--line)}
 button.del{background:transparent;color:var(--danger);padding:4px 8px;font-weight:400}
 button.ed{background:transparent;color:var(--ac);padding:4px 8px;font-weight:400}
+.ysel{cursor:pointer;text-decoration:underline dotted}
+tr.sel td{background:var(--bg)}
 .j{display:block;font-size:15px;font-weight:600}
 .j.ok{color:#12a150}.j.high{color:var(--danger)}.j.low{color:#f08c00}.j.na{color:var(--sub);font-weight:400}
 .tabs{display:flex;gap:6px;margin-bottom:14px}
@@ -32,12 +37,14 @@ button.ed{background:transparent;color:var(--ac);padding:4px 8px;font-weight:400
 .tabs button.on{background:var(--ac);color:var(--ac2);border-color:var(--ac)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .latest{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.stat{background:var(--bg);border-radius:10px;padding:8px 10px}
-.stat b{display:block;font-size:26px}
-.stat span{font-size:16px;color:var(--sub)}
-.d{font-size:20px;display:block;margin-top:2px}.stat .up{color:var(--danger);font-weight:600}.stat .down{color:#12a150;font-weight:600}
+.stat{background:var(--bg);border-radius:10px;padding:6px 8px}
+.stat b{display:block;font-size:22px}
+.stat span{font-size:14px;color:var(--sub)}
+.d{font-size:16px;display:block;margin-top:2px}.stat .up{color:var(--danger);font-weight:600}.stat .down{color:#12a150;font-weight:600}
 .scroll{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:22px;white-space:nowrap}
+#table,#cTable{font-size:19px}
+#save,#cSave{margin-left:auto}
 th,td{padding:10px 9px;border-bottom:1px solid var(--line);text-align:right}
 th:first-child,td:first-child{text-align:left;position:sticky;left:0;z-index:1;background:var(--card);box-shadow:inset -1px 0 0 var(--line)}
 th{color:var(--sub);font-weight:500}
@@ -63,10 +70,10 @@ textarea{width:100%;min-height:80px;font:15px monospace;padding:8px;border:1px s
 <section id="tab-rec">
 <div class="card">
 <h2 id="formTitle">記録する</h2>
-<div class="grid">
-<div class="full"><label>日付</label><input type="date" id="date"></div>
+<div class="grid grid3">
+<div class="full row" style="flex-wrap:nowrap;align-items:flex-end"><div><label style="min-height:0">日付</label><input type="date" id="date" style="width:200px"></div><button id="save">保存</button></div>
 <div id="inputs" style="display:contents"></div>
-<div class="full row"><button id="save">保存</button><span class="muted" id="msg">同じ日付は上書きされます。空欄の項目は前回のまま残ります。</span></div>
+<div class="full"><span class="muted" id="msg">同じ日付は上書きされます。空欄の項目は前回のまま残ります。</span></div>
 </div>
 </div>
 
@@ -88,18 +95,23 @@ textarea{width:100%;min-height:80px;font:15px monospace;padding:8px;border:1px s
 <section id="tab-chk">
 <div class="card">
 <h2 id="chkTitle">健康診断の記録</h2>
-<div class="grid">
-<div class="full"><label>年（受診した年）</label><input type="number" inputmode="numeric" id="cYear" min="1900" max="2200"></div>
+<div class="grid grid3">
+<div class="full row" style="flex-wrap:nowrap;align-items:flex-end"><div><label style="min-height:0">年（受診した年）</label><input type="number" inputmode="numeric" id="cYear" min="1900" max="2200" style="width:150px"></div><button id="cSave">保存</button></div>
 <div><label>身長 (cm)</label><input type="number" step="0.1" inputmode="decimal" id="cH"></div>
 <div><label>体重 (kg)</label><input type="number" step="0.1" inputmode="decimal" id="cW"></div>
-<div class="full"><label>腹囲 (cm)</label><input type="number" step="0.1" inputmode="decimal" id="cA"></div>
-<div class="full row"><button id="cSave">保存</button><span class="muted" id="cMsg">同じ年は上書きされます。</span></div>
+<div><label>腹囲 (cm)</label><input type="number" step="0.1" inputmode="decimal" id="cA"></div>
+<div class="full"><span class="muted" id="cMsg">同じ年は上書きされます。</span></div>
 </div>
 </div>
 <div class="card">
 <h2>年ごとの記録</h2>
 <div class="scroll"><table id="cTable"></table></div>
-<p class="muted" style="margin-bottom:0">判定は目安で、診断ではありません。BMIは、設定タブで生年月日を入れると年齢別の目標範囲（日本人の食事摂取基準2025年版）で、入れないと日本肥満学会の区分で表示します。腹囲は、性別を入れると男性85cm・女性90cmを基準に表示します。年齢は「その年−生まれた年」です。</p>
+<p class="muted" style="margin-bottom:0">判定は目安で、診断ではありません。BMIは、設定タブで生年月日を入れると年齢別の目標範囲（日本人の食事摂取基準2025年版）で、入れないと日本肥満学会の区分で表示します。腹囲は、性別を入れると男性85cm・女性90cmを基準に表示します。年齢は「その年−生まれた年」です。年を押すと、その年のBMIの目安が下の図に出ます。</p>
+</div>
+<div class="card">
+<h2>BMIの目安（図）</h2>
+<div id="bmiFig"></div>
+<p class="muted" id="bmiNote" style="margin-bottom:0"></p>
 </div>
 </section>
 
@@ -256,7 +268,7 @@ async function initCloud(){
     pushQ=pushQ.then(push);
   }catch(e){setSync("この端末のみに保存されています（クラウドと同期できませんでした）")}
 }
-let checks=[],editingYear=null,profile={birth:"",sex:""};
+let checks=[],editingYear=null,selYear=null,profile={birth:"",sex:""};
 function cleanChecks(a){
   return (Array.isArray(a)?a:[]).filter(r=>r&&Number.isInteger(r.year)&&r.year>=1900&&r.year<=2200).map(r=>{
     const o={year:r.year};if(typeof r.u==="number")o.u=r.u;
@@ -301,17 +313,49 @@ function waistJudge(a){
   if(a==null||!profile.sex)return null;
   return a>=(profile.sex==="m"?85:90)?["基準以上","high"]:["基準未満","ok"];
 }
+function renderBmiFig(){
+  const el=$("bmiFig"),note=$("bmiNote");
+  const pts=checks.filter(r=>r.h&&r.w).sort((a,b)=>a.year-b.year).map(r=>({year:r.year,b:r.w/((r.h/100)*(r.h/100)),h:r.h}));
+  if(!pts.length){el.innerHTML='<p class="muted">身長と体重を入れると、ここにBMIの図が出ます。</p>';note.textContent="";return}
+  const found=selYear==null?null:pts.find(p=>p.year===selYear);
+  const last=found||pts[pts.length-1],miss=selYear!=null&&!found,age=ageAt(last.year);
+  const W=600,H=176,L=16,R=16,MN=14,MX=42,BY=70,BH=40;
+  const X=v=>L+(Math.min(MX,Math.max(MN,v))-MN)/(MX-MN)*(W-L-R);
+  const byAge=age!=null&&age>=18;
+  const lo=byAge?(age>=65?21.5:age>=50?20:18.5):18.5;
+  let segs,ticks;
+  if(byAge){
+    segs=[[MN,lo,"#f08c00","低め"],[lo,25,"#12a150","目標範囲"],[25,MX,"#d92d20","高め"]];ticks=[lo,25];
+  }else{
+    segs=[[MN,18.5,"#f08c00","低体重"],[18.5,25,"#12a150","普通体重"],[25,30,"#ee6c4d","肥満1度"],[30,35,"#d92d20","肥満2度"],[35,40,"#a4161a","肥満3度"],[40,MX,"#6d0f12","4度"]];ticks=[18.5,25,30,35,40];
+  }
+  let g=segs.map(([a,b,c,t])=>{
+    const x0=X(a),w=X(b)-X(a);
+    return `<rect x="${x0.toFixed(1)}" y="${BY}" width="${w.toFixed(1)}" height="${BH}" fill="${c}"/>`+(w>=70?`<text x="${(x0+w/2).toFixed(1)}" y="${BY+BH/2+7}" text-anchor="middle" font-size="20" fill="#fff">${t}</text>`:"");
+  }).join("");
+  g+=ticks.map(t=>`<text x="${X(t).toFixed(1)}" y="${BY+BH+28}" text-anchor="middle" font-size="20" fill="var(--sub)">${t}</text>`).join("");
+  pts.filter(p=>p!==last).forEach(p=>{g+=`<circle cx="${X(p.b).toFixed(1)}" cy="${BY+BH/2}" r="7" fill="#fff" stroke="var(--tx)" stroke-width="3"/>`});
+  const xl=X(last.b);
+  const anc=xl<110?"start":xl>W-110?"end":"middle",tx=anc==="start"?L:anc==="end"?W-R:xl;
+  g+=`<text x="${tx.toFixed(1)}" y="24" text-anchor="${anc}" font-size="22" font-weight="700" fill="var(--tx)">${last.year}年 ${last.b.toFixed(1)}</text><path d="M${(xl-11).toFixed(1)} 36 L${(xl+11).toFixed(1)} 36 L${xl.toFixed(1)} ${BY-2} Z" fill="var(--tx)"/><circle cx="${xl.toFixed(1)}" cy="${BY+BH/2}" r="9" fill="var(--tx)" stroke="#fff" stroke-width="3"/>`;
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="BMIの目安図">${g}</svg>`;
+  const m2=(last.h/100)*(last.h/100);
+  note.textContent=(miss?`${selYear}年は身長か体重が未入力のため、最新の年を表示しています。`:"")+`${last.year}年のBMIは ${last.b.toFixed(1)}（${bmiJudge(last.b,age)[0]}）。`+(byAge?`${last.year}年（${age}歳）の目標範囲は BMI ${lo.toFixed(1)}〜24.9 です。`:"生年月日を設定タブで入れると、年齢別の目標範囲で表示します。")+` 身長 ${last.h.toFixed(1)}cm では、体重 ${(lo*m2).toFixed(1)}〜${(24.9*m2).toFixed(1)}kg にあたります。▼は選んだ年、○はほかの年です。`;
+}
 function renderChecks(){
+  renderBmiFig();
   const el=$("cTable"),s=checks.slice().sort((a,b)=>b.year-a.year);
   if(!s.length){el.innerHTML='<tr><td class="muted">まだ記録がありません</td></tr>';return}
   const f=v=>v==null?"":v.toFixed(1);
   const cell=(n,j)=>n+(j?`<span class="j ${j[1]}">${j[0]}</span>`:"");
+  const lp=checks.filter(r=>r.h&&r.w).map(r=>r.year),eff=selYear!=null?selYear:(lp.length?Math.max(...lp):null);
   let h="<tr><th>年</th><th>身長(cm)</th><th>体重(kg)</th><th>腹囲(cm)</th><th>BMI</th><th></th></tr>";
   s.forEach(r=>{
     const b=r.h&&r.w?r.w/((r.h/100)*(r.h/100)):null,age=ageAt(r.year);
-    h+=`<tr><td>${cell(r.year+"年",age==null?null:[age+"歳","na"])}</td><td>${f(r.h)}</td><td>${f(r.w)}</td><td>${cell(f(r.a),waistJudge(r.a))}</td><td>${cell(b==null?"":b.toFixed(1),bmiJudge(b,age))}</td><td><button class="ed" data-y="${r.year}">編集</button><button class="del" data-y="${r.year}">削除</button></td></tr>`;
+    h+=`<tr class="${r.year===eff?"sel":""}"><td class="ysel" data-y="${r.year}">${cell(r.year+"年",age==null?null:[age+"歳","na"])}</td><td>${f(r.h)}</td><td>${f(r.w)}</td><td>${cell(f(r.a),waistJudge(r.a))}</td><td>${cell(b==null?"":b.toFixed(1),bmiJudge(b,age))}</td><td><button class="ed" data-y="${r.year}">編集</button><button class="del" data-y="${r.year}">削除</button></td></tr>`;
   });
   el.innerHTML=h;
+  el.querySelectorAll(".ysel").forEach(td=>td.onclick=()=>{selYear=+td.dataset.y;renderChecks();$("bmiFig").scrollIntoView({behavior:"smooth",block:"center"})});
   el.querySelectorAll(".ed").forEach(b=>b.onclick=()=>editCheck(+b.dataset.y));
   el.querySelectorAll(".del").forEach(b=>b.onclick=()=>twoTap(b,()=>delCheck(+b.dataset.y)));
 }
